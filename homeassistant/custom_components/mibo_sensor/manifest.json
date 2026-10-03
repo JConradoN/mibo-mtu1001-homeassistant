@@ -1,0 +1,11 @@
+{
+  "domain": "mibo_sensor",
+  "name": "Sensor Mibo/Dahua (ex: Intelbras MTU 1001)",
+  "codeowners": ["@jconradon"],
+  "config_flow": true,
+  "documentation": "https://github.com/JConradoN/mibo-mtu1001-homeassistant",
+  "integration_type": "device",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "1.0.0"
+}

@@ -47,49 +47,51 @@ seu, sem abrir o app, sem depender da UI do Mibo renderizar nada.
 
 | Arquivo | O que faz |
 |---|---|
-| `mibo_client.py` | Cliente Python puro da API `pcs/v1` do Mibo/Dahua — assina e faz a chamada que lê os dados do sensor. |
-| `mtu1001_ha_sync.py` | Usa o `mibo_client` e publica os valores no Home Assistant via API REST (`POST /api/states/...`). |
-| `systemd/` | Unit + timer pra rodar o sync a cada 5 minutos automaticamente (systemd user). |
+| `homeassistant/custom_components/mibo_sensor/` | **Integração nativa do Home Assistant** (recomendado) — config flow pela UI, `DataUpdateCoordinator` fazendo polling a cada 5 min, entidades `sensor`/`binary_sensor` de verdade (não precisa de script nem systemd separado). |
+| `mibo_client.py` | Cliente Python puro da API `pcs/v1`, standalone — útil pra testar/debugar fora do HA. |
+| `mtu1001_ha_sync.py` + `systemd/` | **Alternativa antiga** (script externo + systemd timer + `POST /api/states/`), só pra quem não quiser instalar um custom_component. A integração nativa faz o mesmo de forma mais robusta (reconecta, mostra erro na UI, etc). |
 | `METHODOLOGY.md` | Processo completo de engenharia reversa: o que foi tentado, o que falhou e por quê, como a chave de assinatura foi extraída. |
-| `.env.example` | Template de configuração (copie pra `.env.local`, preencha com seus dados). |
+| `.env.example` | Template de configuração do caminho standalone/script (copie pra `.env.local`). |
 
-## Como usar
+## Como usar (integração nativa, recomendado)
 
 ### 1. Descobrir os identificadores do seu dispositivo
 
-Você precisa de 3 valores específicos da sua conta/dispositivo: `MIBO_USERNAME` (um UUID
-interno, não é seu e-mail/telefone), `MIBO_PRODUCT_ID` e `MIBO_DEVICE_ID`. Esses valores
-aparecem em qualquer chamada da API capturada com o app — o processo completo (interceptação
-TLS + bypass de pinning) está documentado em `METHODOLOGY.md`. Não existe hoje um jeito mais
-simples (sem decifrar o tráfego do app uma vez) de descobrir esses IDs.
+Você precisa de 3 valores específicos da sua conta/dispositivo: `username` (um UUID interno,
+não é seu e-mail/telefone), `product_id` e `device_id`. Esses valores aparecem em qualquer
+chamada da API capturada com o app — o processo completo (interceptação TLS + bypass de
+pinning) está documentado em `METHODOLOGY.md`. Não existe hoje um jeito mais simples (sem
+decifrar o tráfego do app uma vez) de descobrir esses IDs.
 
-### 2. Configurar
+### 2. Instalar
+
+```bash
+cp -r homeassistant/custom_components/mibo_sensor /caminho/do/seu/config/custom_components/
+# reinicie o Home Assistant
+```
+
+### 3. Configurar pela UI
+
+Configurações → Dispositivos e Serviços → Adicionar Integração → "Sensor Mibo/Dahua" →
+preenche os 3 valores do passo 1. Cria automaticamente:
+- `sensor.<nome>_temperatura` (°C)
+- `sensor.<nome>_umidade` (%)
+- `sensor.<nome>_bateria_sinal` (%, sinal/qualidade)
+- `binary_sensor.<nome>_online`
+
+## Alternativa: script externo (sem instalar custom_component)
+
+Pra quem preferir não mexer em `custom_components/`, dá pra rodar `mtu1001_ha_sync.py` como
+script externo publicando via API REST do HA — ver `systemd/` pro timer. Funcionalmente
+equivalente, só mais manual (precisa gerar Long-Lived Access Token do HA, não aparece na UI de
+integrações, erros só no log do systemd em vez de aparecer na tela de Dispositivos).
 
 ```bash
 cp .env.example .env.local
-# edite .env.local com os valores do passo 1 + seu token do Home Assistant
 source .env.local
 pip install requests
-python3 mibo_client.py        # testa a leitura
-python3 mtu1001_ha_sync.py    # testa a publicação no HA
+python3 mtu1001_ha_sync.py
 ```
-
-Gerar o `HA_TOKEN`: no Home Assistant, Perfil → Segurança → "Long-Lived Access Tokens" → Criar.
-
-### 3. Automatizar (systemd user)
-
-```bash
-mkdir -p ~/.config/systemd/user
-cp systemd/mtu1001-ha-sync.* ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now mtu1001-ha-sync.timer
-```
-
-Isso cria 4 entidades no HA, atualizadas a cada 5 min:
-- `sensor.mtu1001_temperatura` (°C)
-- `sensor.mtu1001_umidade` (%)
-- `sensor.mtu1001_bateria` (%, sinal/qualidade)
-- `binary_sensor.mtu1001_online`
 
 ## Caminho alternativo mais robusto (investigar antes de expandir isto)
 
