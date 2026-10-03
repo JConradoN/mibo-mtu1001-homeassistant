@@ -70,6 +70,12 @@ class MiboSensor(CoordinatorEntity[MiboDataUpdateCoordinator], SensorEntity):
     """Sensor do mibo_sensor."""
 
     _attr_has_entity_name = True
+    # por padrao o HA so atualiza o timestamp quando o valor muda -- com
+    # polling na nuvem isso faz um sensor estavel (ex: umidade parada numa
+    # mesma casa decimal por varios ciclos) parecer "travado" mesmo
+    # funcionando certo. force_update garante que o timestamp sempre reflete
+    # o ultimo poll de verdade, nao a ultima vez que o valor mudou.
+    _attr_force_update = True
     entity_description: MiboSensorEntityDescription
 
     def __init__(

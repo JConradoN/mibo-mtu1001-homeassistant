@@ -27,6 +27,7 @@ class MiboOnlineSensor(CoordinatorEntity[MiboDataUpdateCoordinator], BinarySenso
 
     _attr_has_entity_name = True
     _attr_translation_key = "online"
+    _attr_force_update = True
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
 
     def __init__(self, coordinator: MiboDataUpdateCoordinator, device_id: str) -> None:
