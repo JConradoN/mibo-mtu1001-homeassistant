@@ -93,28 +93,23 @@ pip install requests
 python3 mtu1001_ha_sync.py
 ```
 
-## Limitação conhecida: `device.info.BasicInfoGet` serve umidade obsoleta (desabilitada por padrão)
+## Cuidado: pollar rápido demais deixa a umidade presa num valor antigo
 
-**Confirmado em produção (2026-10-03), com teste decisivo:** abrimos o app Mibo ao vivo no
-mesmo instante de uma chamada à API deste projeto. Resultado:
+**Investigado e resolvido em produção (2026-10-03).** Durante testes, a leitura de umidade
+ficou presa em 84.9% por mais de 30 minutos enquanto o app Mibo (ao vivo) já mostrava 79.7% —
+parecia um bug permanente do endpoint `device.info.BasicInfoGet` só pra esse campo.
 
-| Fonte | Temperatura | Umidade |
-|---|---|---|
-| App Mibo (tela ao vivo) | 25.7°C | **79.7%** |
-| Esta API, mesmo instante | 25.69°C (bate) | **84.9%** (errado, parado há 30+ min) |
+**Causa real:** não é o endpoint, é o **volume/frequência das nossas próprias chamadas**. O
+teste decisivo: paramos completamente de chamar a API por 5 minutos (zero requisições) e,
+na volta, o valor destravou sozinho e bateu exato com o app no mesmo instante
+(25.5°C/74.7% nos dois). Ou seja, pollar rápido demais (testamos com 60s + várias chamadas
+manuais em sequência durante debug) faz a nuvem da Dahua começar a servir um valor
+cacheado/obsoleto pra esse DP especificamente — temperatura não parece sofrer o mesmo efeito.
 
-Ou seja: **não é "atualiza devagar"** — é esse endpoint REST específico
-(`device.info.BasicInfoGet`) servindo um valor **cacheado/obsoleto** pra esse DP em
-particular, do lado da Dahua. A temperatura, no mesmo endpoint, bate exatamente com o app em
-tempo real. O app consegue umidade fresca porque usa um canal "ao vivo" separado — um
-protocolo binário proprietário (visto na engenharia reversa original, DP framing tipo
-`iot_request`/`iot_response` sobre uma conexão persistente) que decidimos não replicar por ser
-bem mais complexo que a chamada REST simples que este projeto usa. Ver `METHODOLOGY.md`.
-
-**Por isso a entidade de umidade vem desabilitada por padrão** (categoria diagnóstico) —
-quem instalar não corre risco de ver um número errado sem aviso. Temperatura, bateria e
-online continuam confiáveis (confirmado batendo com o app). Quem quiser habilitar umidade
-mesmo assim (ciente da limitação) pode pela tela de entidades do HA.
+**Mitigação:** `UPDATE_INTERVAL_SECONDS` (em `const.py`) está em **120s**, mais conservador que
+o ciclo natural do próprio sensor (~60s), de propósito — evita martelar a API rápido demais.
+Se você notar a umidade "travando" de novo, aumente esse intervalo e evite ficar testando com
+chamadas manuais em sequência rápida (cada chamada de teste conta pro mesmo limite).
 
 ## Caminho alternativo mais robusto (investigar antes de expandir isto)
 

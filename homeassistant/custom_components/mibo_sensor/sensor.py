@@ -10,7 +10,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -37,23 +37,20 @@ SENSOR_DESCRIPTIONS: tuple[MiboSensorEntityDescription, ...] = (
         dp_key=DP_TEMPERATURE,
     ),
     MiboSensorEntityDescription(
-        # CONFIRMADO (2026-10-03): o endpoint device.info.BasicInfoGet serve
-        # um valor CACHEADO/OBSOLETO pra esse DP especifico do lado da
-        # Dahua -- enquanto temperatura, no MESMO endpoint, e precisa (
-        # comparado em tempo real: app mostrando 25.7C/79.7%, nossa chamada
-        # na mesma hora devolvendo 25.69C/84.9% -- temp bate, umidade nao).
-        # O app consegue umidade fresca porque usa um canal "ao vivo"
-        # separado (protocolo binario proprietario, nao replicado aqui por
-        # ser complexo demais -- ver METHODOLOGY.md). Ate isso ser
-        # implementado, humidade fica desabilitada por padrao pra nao
-        # mostrar numero errado sem aviso.
+        # CONFIRMADO (2026-10-03): polling agressivo (intervalo curto +
+        # varias chamadas manuais em sequencia, tudo feito durante testes)
+        # faz a nuvem Dahua comecar a servir um valor cacheado/obsoleto so
+        # pro DP de umidade -- 5 minutos sem nenhuma chamada foi suficiente
+        # pra destravar e voltar a bater exato com o app (confirmado: 25.5C/
+        # 74.7% no app, 25.5C/74.69% aqui, no mesmo instante). Nao e
+        # limitacao permanente do endpoint -- e sensibilidade a frequencia
+        # de chamada do lado deles. UPDATE_INTERVAL_SECONDS (const.py) foi
+        # ajustado pra ser mais conservador por causa disso.
         key="humidity", translation_key="humidity",
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
         dp_key=DP_HUMIDITY,
     ),
     MiboSensorEntityDescription(
