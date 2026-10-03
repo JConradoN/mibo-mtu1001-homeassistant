@@ -93,23 +93,28 @@ pip install requests
 python3 mtu1001_ha_sync.py
 ```
 
-## Limitação conhecida: umidade atualiza mais devagar que temperatura
+## Limitação conhecida: `device.info.BasicInfoGet` serve umidade obsoleta (desabilitada por padrão)
 
-Confirmado em produção (2026-10-03): a leitura de **temperatura** (DP `16000`) atualiza a
-cada ciclo normalmente, mas a de **umidade** (DP `16100`) às vezes fica parada no mesmo valor
-por 10+ minutos, mesmo com o sensor físico mostrando um número levemente diferente (ex: HA
-mostrando 84.9%, aparelho físico mostrando 85.2%).
+**Confirmado em produção (2026-10-03), com teste decisivo:** abrimos o app Mibo ao vivo no
+mesmo instante de uma chamada à API deste projeto. Resultado:
 
-**Verificado que não é bug deste projeto** — uma chamada direta e isolada na API, feita na
-hora, devolve exatamente o mesmo valor "parado" que o Home Assistant já tinha, enquanto a
-temperatura do mesmo registro muda normalmente na mesma chamada. Ou seja: a nuvem da
-Dahua/Mibo em si está com esse dado parado (o dispositivo aparentemente manda atualização de
-umidade pra nuvem com menos frequência/sensibilidade que temperatura). Pollar mais rápido daqui
-não resolve — só re-lê o mesmo valor parado com mais frequência.
+| Fonte | Temperatura | Umidade |
+|---|---|---|
+| App Mibo (tela ao vivo) | 25.7°C | **79.7%** |
+| Esta API, mesmo instante | 25.69°C (bate) | **84.9%** (errado, parado há 30+ min) |
 
-Se você usa a leitura de umidade de verdade (automação, alerta), saiba que ela pode ficar
-"desatualizada" por minutos mesmo com tudo funcionando certo — é característica do hardware/
-backend do fabricante, não desta integração.
+Ou seja: **não é "atualiza devagar"** — é esse endpoint REST específico
+(`device.info.BasicInfoGet`) servindo um valor **cacheado/obsoleto** pra esse DP em
+particular, do lado da Dahua. A temperatura, no mesmo endpoint, bate exatamente com o app em
+tempo real. O app consegue umidade fresca porque usa um canal "ao vivo" separado — um
+protocolo binário proprietário (visto na engenharia reversa original, DP framing tipo
+`iot_request`/`iot_response` sobre uma conexão persistente) que decidimos não replicar por ser
+bem mais complexo que a chamada REST simples que este projeto usa. Ver `METHODOLOGY.md`.
+
+**Por isso a entidade de umidade vem desabilitada por padrão** (categoria diagnóstico) —
+quem instalar não corre risco de ver um número errado sem aviso. Temperatura, bateria e
+online continuam confiáveis (confirmado batendo com o app). Quem quiser habilitar umidade
+mesmo assim (ciente da limitação) pode pela tela de entidades do HA.
 
 ## Caminho alternativo mais robusto (investigar antes de expandir isto)
 

@@ -10,7 +10,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -37,15 +37,23 @@ SENSOR_DESCRIPTIONS: tuple[MiboSensorEntityDescription, ...] = (
         dp_key=DP_TEMPERATURE,
     ),
     MiboSensorEntityDescription(
-        # a nuvem Dahua/Mibo atualiza esse DP com bem menos frequencia que o
-        # de temperatura -- pode ficar parado por 10+ min mesmo com tudo
-        # funcionando certo aqui. Nao e bug desta integracao, confirmado
-        # comparando contra chamada isolada na API em tempo real. Ver README.
+        # CONFIRMADO (2026-10-03): o endpoint device.info.BasicInfoGet serve
+        # um valor CACHEADO/OBSOLETO pra esse DP especifico do lado da
+        # Dahua -- enquanto temperatura, no MESMO endpoint, e precisa (
+        # comparado em tempo real: app mostrando 25.7C/79.7%, nossa chamada
+        # na mesma hora devolvendo 25.69C/84.9% -- temp bate, umidade nao).
+        # O app consegue umidade fresca porque usa um canal "ao vivo"
+        # separado (protocolo binario proprietario, nao replicado aqui por
+        # ser complexo demais -- ver METHODOLOGY.md). Ate isso ser
+        # implementado, humidade fica desabilitada por padrao pra nao
+        # mostrar numero errado sem aviso.
         key="humidity", translation_key="humidity",
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
         dp_key=DP_HUMIDITY,
     ),
     MiboSensorEntityDescription(
