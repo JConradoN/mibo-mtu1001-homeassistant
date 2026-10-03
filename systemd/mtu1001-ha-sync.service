@@ -1,0 +1,10 @@
+[Unit]
+Description=Sincroniza sensor MTU1001 (Mibo/Dahua) com Home Assistant
+
+[Service]
+Type=oneshot
+# Ajuste o caminho pra onde voce clonou este repo. O .env.local usa sintaxe
+# 'export KEY=valor' (bash), por isso e carregado via 'source', nao via
+# EnvironmentFile= (que exige KEY=valor puro, sem export/aspas).
+WorkingDirectory=%h/mibo-mtu1001-homeassistant
+ExecStart=/bin/bash -c 'source %h/mibo-mtu1001-homeassistant/.env.local && exec /usr/bin/python3 %h/mibo-mtu1001-homeassistant/mtu1001_ha_sync.py'
