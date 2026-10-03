@@ -37,6 +37,10 @@ SENSOR_DESCRIPTIONS: tuple[MiboSensorEntityDescription, ...] = (
         dp_key=DP_TEMPERATURE,
     ),
     MiboSensorEntityDescription(
+        # a nuvem Dahua/Mibo atualiza esse DP com bem menos frequencia que o
+        # de temperatura -- pode ficar parado por 10+ min mesmo com tudo
+        # funcionando certo aqui. Nao e bug desta integracao, confirmado
+        # comparando contra chamada isolada na API em tempo real. Ver README.
         key="humidity", translation_key="humidity",
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,

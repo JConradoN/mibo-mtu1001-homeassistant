@@ -93,6 +93,24 @@ pip install requests
 python3 mtu1001_ha_sync.py
 ```
 
+## Limitação conhecida: umidade atualiza mais devagar que temperatura
+
+Confirmado em produção (2026-10-03): a leitura de **temperatura** (DP `16000`) atualiza a
+cada ciclo normalmente, mas a de **umidade** (DP `16100`) às vezes fica parada no mesmo valor
+por 10+ minutos, mesmo com o sensor físico mostrando um número levemente diferente (ex: HA
+mostrando 84.9%, aparelho físico mostrando 85.2%).
+
+**Verificado que não é bug deste projeto** — uma chamada direta e isolada na API, feita na
+hora, devolve exatamente o mesmo valor "parado" que o Home Assistant já tinha, enquanto a
+temperatura do mesmo registro muda normalmente na mesma chamada. Ou seja: a nuvem da
+Dahua/Mibo em si está com esse dado parado (o dispositivo aparentemente manda atualização de
+umidade pra nuvem com menos frequência/sensibilidade que temperatura). Pollar mais rápido daqui
+não resolve — só re-lê o mesmo valor parado com mais frequência.
+
+Se você usa a leitura de umidade de verdade (automação, alerta), saiba que ela pode ficar
+"desatualizada" por minutos mesmo com tudo funcionando certo — é característica do hardware/
+backend do fabricante, não desta integração.
+
 ## Caminho alternativo mais robusto (investigar antes de expandir isto)
 
 O Home Assistant já tem uma integração **oficial** `imou` (mantida pelo próprio fabricante,
