@@ -91,6 +91,27 @@ Isso cria 4 entidades no HA, atualizadas a cada 5 min:
 - `sensor.mtu1001_bateria` (%, sinal/qualidade)
 - `binary_sensor.mtu1001_online`
 
+## Caminho alternativo mais robusto (investigar antes de expandir isto)
+
+O Home Assistant já tem uma integração **oficial** `imou` (mantida pelo próprio fabricante,
+`codeowners: @Imou-OpenPlatform`), que usa a API **oficial e documentada** do Imou Open
+Platform (`pyimouapi`), não a API de consumidor que este projeto usa por engenharia reversa.
+
+Essa integração oficial já define tipos de sensor `temperature_current`, `humidity_current` e
+`battery` — e tem endpoints (`getIotDeviceProperties`, `getIotDeviceDetailInfo`) com cara muito
+parecida com o que descobrimos aqui. É bem possível que o MTU 1001 **já seja suportado** por
+essa integração oficial, sem precisar de nada deste repositório — bastaria:
+
+1. Criar conta developer no Imou Open Platform (console deles).
+2. Gerar App ID + App Secret.
+3. Vincular a conta/dispositivos do Mibo ao projeto developer (processo parecido com o Tuya
+   Cloud Project — e, como em outros white-labels da Intelbras, existe risco real do app
+   bloquear esse vínculo de propósito).
+
+**Não testado ainda** — exige cadastro/ação direta do usuário, fora do escopo automatizável.
+Se isso funcionar, a abordagem oficial é estritamente melhor (suportada pelo fabricante, não
+quebra em atualização de app) e esse repositório vira desnecessário pra quem conseguir migrar.
+
 ## Aviso
 
 Isso é engenharia reversa de uma API não documentada e não oficial. A Dahua/Intelbras pode
